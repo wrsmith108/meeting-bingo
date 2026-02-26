@@ -41,88 +41,55 @@ This architecture plan defines the technical design for Meeting Bingo, a browser
 
 ### High-Level Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              BROWSER ENVIRONMENT                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                         REACT APPLICATION                              │  │
-│  │                                                                        │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐ │  │
-│  │  │   UI Layer   │  │  Game Logic  │  │    Speech Recognition        │ │  │
-│  │  │              │  │              │  │                              │ │  │
-│  │  │ • Components │  │ • Card Gen   │  │ • Web Speech API             │ │  │
-│  │  │ • Layouts    │  │ • Win Check  │  │ • Transcript Processing      │ │  │
-│  │  │ • Styles     │  │ • Scoring    │  │ • Word Detection             │ │  │
-│  │  └──────┬───────┘  └──────┬───────┘  └──────────────┬───────────────┘ │  │
-│  │         │                 │                         │                  │  │
-│  │         └─────────────────┼─────────────────────────┘                  │  │
-│  │                           │                                            │  │
-│  │                    ┌──────▼──────┐                                     │  │
-│  │                    │   Context   │                                     │  │
-│  │                    │    State    │                                     │  │
-│  │                    └──────┬──────┘                                     │  │
-│  │                           │                                            │  │
-│  │                    ┌──────▼──────┐                                     │  │
-│  │                    │ localStorage│                                     │  │
-│  │                    │ Persistence │                                     │  │
-│  │                    └─────────────┘                                     │  │
-│  │                                                                        │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                     BROWSER APIS (Built-in, Free)                      │  │
-│  │                                                                        │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │  │
-│  │  │ Web Speech  │  │   Audio     │  │   Clipboard │  │   Share     │   │  │
-│  │  │     API     │  │   Context   │  │     API     │  │     API     │   │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │  │
-│  │                                                                        │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ HTTPS
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              VERCEL EDGE NETWORK                             │
-│                         (Static Hosting, CDN, SSL)                           │
-│                                                                             │
-│                           meetingbingo.vercel.app                           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Browser["BROWSER ENVIRONMENT"]
+        subgraph React["REACT APPLICATION"]
+            UI["UI Layer<br/>Components, Layouts, Styles"]
+            Game["Game Logic<br/>Card Gen, Win Check, Scoring"]
+            Speech["Speech Recognition<br/>Web Speech API, Transcript Processing, Word Detection"]
+
+            UI --> Context["Context State"]
+            Game --> Context
+            Speech --> Context
+            Context --> Storage["localStorage Persistence"]
+        end
+
+        subgraph APIs["BROWSER APIS (Built-in, Free)"]
+            WebSpeech["Web Speech API"]
+            Audio["Audio Context"]
+            Clipboard["Clipboard API"]
+            Share["Share API"]
+        end
+    end
+
+    Browser -->|HTTPS| Vercel["VERCEL EDGE NETWORK<br/>Static Hosting, CDN, SSL<br/>meetingbingo.vercel.app"]
 ```
 
 ### Data Flow Architecture
 
+#### 1. Card Generation Flow
+
+```mermaid
+flowchart LR
+    A["Select Category"] --> B["Shuffle Words"] --> C["Pick 24 Words"] --> D["Render Card"]
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                            DATA FLOW                                      │
-└──────────────────────────────────────────────────────────────────────────┘
 
-1. CARD GENERATION FLOW
-   ┌───────────┐    ┌───────────┐    ┌───────────┐    ┌───────────┐
-   │  Select   │───▶│  Shuffle  │───▶│  Pick 24  │───▶│  Render   │
-   │ Category  │    │   Words   │    │   Words   │    │   Card    │
-   └───────────┘    └───────────┘    └───────────┘    └───────────┘
+#### 2. Speech Recognition Flow
 
-2. SPEECH RECOGNITION FLOW
-   ┌───────────┐    ┌───────────┐    ┌───────────┐    ┌───────────┐
-   │   Audio   │───▶│  Speech   │───▶│ Transcript│───▶│   Word    │
-   │   Input   │    │    API    │    │   Text    │    │ Detection │
-   └───────────┘    └───────────┘    └───────────┘    └─────┬─────┘
-                                                            │
-   ┌───────────┐    ┌───────────┐    ┌───────────┐         │
-   │  Update   │◀───│  Fill     │◀───│  Match    │◀────────┘
-   │    UI     │    │  Square   │    │  Found?   │
-   └───────────┘    └───────────┘    └───────────┘
+```mermaid
+flowchart LR
+    A["Audio Input"] --> B["Speech API"] --> C["Transcript Text"] --> D["Word Detection"]
+    D --> E{"Match Found?"}
+    E --> F["Fill Square"] --> G["Update UI"]
+```
 
-3. WIN DETECTION FLOW
-   ┌───────────┐    ┌───────────┐    ┌───────────┐    ┌───────────┐
-   │  Square   │───▶│  Check    │───▶│  BINGO?   │───▶│ Celebrate │
-   │  Filled   │    │  Lines    │    │   Yes!    │    │   & Share │
-   └───────────┘    └───────────┘    └───────────┘    └───────────┘
+#### 3. Win Detection Flow
+
+```mermaid
+flowchart LR
+    A["Square Filled"] --> B["Check Lines"] --> C{"BINGO?"}
+    C -->|Yes| D["Celebrate & Share"]
 ```
 
 ---
@@ -1178,30 +1145,28 @@ npx tailwindcss init -p
 
 ### Multiplayer Considerations
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     FUTURE: MULTIPLAYER                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Option A: WebSocket Server (Requires Backend)                  │
-│  • Real-time sync across players                                │
-│  • Shared game state                                            │
-│  • Live leaderboard                                             │
-│  • Cost: $5-20/month for hosting                                │
-│                                                                 │
-│  Option B: Peer-to-Peer (WebRTC)                                │
-│  • No backend required                                          │
-│  • Direct browser connections                                   │
-│  • Limited to ~10 players                                       │
-│  • Cost: Free                                                   │
-│                                                                 │
-│  Option C: Firebase Realtime Database                           │
-│  • Managed real-time sync                                       │
-│  • Free tier generous                                           │
-│  • Easy implementation                                          │
-│  • Cost: Free up to 100 concurrent                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    subgraph A["Option A: WebSocket Server"]
+        A1["Real-time sync across players"]
+        A2["Shared game state"]
+        A3["Live leaderboard"]
+        A4["Cost: $5-20/month"]
+    end
+
+    subgraph B["Option B: Peer-to-Peer WebRTC"]
+        B1["No backend required"]
+        B2["Direct browser connections"]
+        B3["Limited to ~10 players"]
+        B4["Cost: Free"]
+    end
+
+    subgraph C["Option C: Firebase Realtime DB"]
+        C1["Managed real-time sync"]
+        C2["Free tier generous"]
+        C3["Easy implementation"]
+        C4["Cost: Free up to 100 concurrent"]
+    end
 ```
 
 ---
