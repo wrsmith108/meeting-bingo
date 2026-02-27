@@ -1,4 +1,4 @@
-export type CategoryId = 'agile' | 'corporate' | 'tech';
+export type CategoryId = 'agile' | 'corporate' | 'tech' | 'traffic' | 'kids' | 'hockey';
 
 export interface Category {
   id: CategoryId;

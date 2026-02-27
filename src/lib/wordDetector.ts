@@ -44,6 +44,15 @@ const WORD_ALIASES: Record<string, string[]> = {
   'roi': ['return on investment', 'r.o.i.'],
   'api': ['a.p.i.', 'interface'],
   'devops': ['dev ops', 'dev-ops'],
+  // Traffic
+  'u-turn': ['u turn', 'uturn'],
+  'off ramp': ['offramp', 'off-ramp'],
+  'on ramp': ['onramp', 'on-ramp'],
+  // Hockey
+  'face off': ['faceoff', 'face-off'],
+  'slapshot': ['slap shot', 'slap-shot'],
+  'one timer': ['one-timer'],
+  'bar down': ['bardown'],
 };
 
 export function detectWordsWithAliases(
